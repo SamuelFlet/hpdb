@@ -1,0 +1,3 @@
+[submodule "hpdbfront"]
+	path = hpdbfront
+	url = https://github.com/SamuelFlet/hpdbfront
