@@ -5,22 +5,34 @@
   "main": "index.js",
   "scripts": {
     "check": "tsc --pretty --noEmit",
-    "start": "ts-node-dev src/main.ts"
+    "start": "ts-node-dev src/main.ts",
+    "try": "ts-node-dev src/processUpload.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.490.0",
+    "@aws-sdk/types": "^3.489.0",
     "@graphql-tools/schema": "^10.0.2",
     "@types/express": "^4.17.13",
     "bcryptjs": "2.4.3",
     "express": "^4.17.1",
+    "fs": "^0.0.1-security",
     "graphql-scalars": "^1.22.4",
+    "graphql-upload": "^16.0.2",
+    "graphql-upload-ts": "^2.1.0",
     "graphql-yoga": "5.1.1",
     "jsonwebtoken": "9.0.2",
+    "multiparty": "^4.2.3",
+    "sharp": "^0.33.2",
+    "shortid": "^2.2.16",
+    "stream": "^0.0.2",
     "supertest": "^6.1.6"
   },
   "devDependencies": {
     "@prisma/client": "5.8.0",
     "@types/bcryptjs": "2.4.6",
+    "@types/graphql-upload": "^16.0.7",
     "@types/jsonwebtoken": "9.0.5",
+    "@types/multiparty": "^0.0.36",
     "prisma": "^5.8.0",
     "ts-node": "10.9.1",
     "ts-node-dev": "2.0.0"
