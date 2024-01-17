@@ -168,7 +168,7 @@ const resolvers = {
     },
     async newProd(
       parent: unknown,
-      args: { name: string; category: string;file: File,},
+      args: { name: string; category: string; file: File },
       context: GraphQLContext
     ) {
       const credentials = {
@@ -197,7 +197,7 @@ const resolvers = {
             data: {
               name: args.name,
               category: args.category,
-              photo:`https://s3.tebi.io/hpdb/${args.file.name}`
+              photo: `https://s3.tebi.io/hpdb/${args.file.name}`,
             },
           });
           return newProd;
