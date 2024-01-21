@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "check": "tsc --pretty --noEmit",
-    "start": "ts-node-dev src/main.ts",
-    "try": "ts-node-dev src/processUpload.ts"
+    "start": "ts-node-dev src/main.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",
