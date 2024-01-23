@@ -12,7 +12,6 @@ const app = (0, express_1.default)();
 const yoga = (0, graphql_yoga_1.createYoga)({ schema: schema_1.schema, context: context_1.createContext });
 app.use(yoga.graphqlEndpoint, yoga);
 app.use('/graphql', (0, graphql_upload_ts_1.graphqlUploadExpress)({ maxFileSize: 100000000, maxFiles: 10 }));
-app.listen(4000, () => {
-    console.log(`GraphQL API located at http://localhost:4000/graphql`);
+app.listen(3000, () => {
 });
 //# sourceMappingURL=main.js.map
