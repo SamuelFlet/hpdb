@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "check": "tsc --pretty --noEmit",
-    "start": "ts-node-dev src/main.ts"
+    "start": "node dist/main.js",
+    "dev": "ts-node-dev src/main.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",
@@ -22,17 +23,18 @@
     "jsonwebtoken": "9.0.2",
     "multiparty": "^4.2.3",
     "sharp": "^0.33.2",
-    "shortid": "^2.2.16",
     "stream": "^0.0.2",
+    "prisma": "^5.8.1",
+    "@prisma/client": "^5.8.1",
     "supertest": "^6.1.6"
   },
   "devDependencies": {
-    "@prisma/client": "5.8.0",
+    "@flydotio/dockerfile": "^0.5.0",
     "@types/bcryptjs": "2.4.6",
     "@types/graphql-upload": "^16.0.7",
     "@types/jsonwebtoken": "9.0.5",
     "@types/multiparty": "^0.0.36",
-    "prisma": "^5.8.0",
+    "nodemon": "^3.0.3",
     "ts-node": "10.9.1",
     "ts-node-dev": "2.0.0"
   },
