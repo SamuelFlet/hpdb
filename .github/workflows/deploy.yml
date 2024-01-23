@@ -9,7 +9,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Copy repository contents via scp
-      uses: SamuelFlet/hpdb
+      uses: SamuelFlet/hpdb@master
       env:
         HOST: ${{ secrets.HOST }}
         USERNAME: ${{ secrets.USERNAME }}
@@ -20,7 +20,7 @@ jobs:
         target: "/var/www/mywebsite"
 
     - name: Executing remote command
-      uses: SamuelFlet/hpdb
+      uses: SamuelFlet/hpdb@master
       with:
         host: ${{ secrets.HOST }}
         USERNAME: ${{ secrets.USERNAME }}
