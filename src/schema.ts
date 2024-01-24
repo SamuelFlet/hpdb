@@ -15,7 +15,7 @@ scalar File
 type Query {
   hello: String!
   feed: [Listing!]!
-  products: [Product!]!
+  prodfeed: [Product!]!
   me: User!
 }
 
@@ -100,7 +100,7 @@ const resolvers = {
     feed: (parent: unknown, args: {}, context: GraphQLContext) =>
       context.prisma.listing.findMany(),
     // Gives list of all products
-    products: (parent: unknown, args: {}, context: GraphQLContext) =>
+    prodfeed: (parent: unknown, args: {}, context: GraphQLContext) =>
       context.prisma.product.findMany(),
     // Gives current user
     me(parent: unknown, args: {}, context: GraphQLContext) {
