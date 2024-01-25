@@ -149,9 +149,6 @@ const resolvers = {
       args: { description: string; cost: number; prodid: number },
       context: GraphQLContext
     ) {
-      if (context.currentUser === null) {
-        throw new Error("Unauthenticated!");
-      }
       const newListing = await context.prisma.listing.create({
         data: {
           description: args.description,
@@ -168,9 +165,6 @@ const resolvers = {
       args: { name: string; category: string; file: File },
       context: GraphQLContext
     ) {
-      if (context.currentUser === null) {
-        throw new Error("Unauthenticated!");
-      }
       const credentials = {
         accessKeyId: "peU3s3HTRnG3sikb",
         secretAccessKey: "jvBhdrNxeIRs2QghZzDBVs8RIvxScJwHjgPK7QUB",
