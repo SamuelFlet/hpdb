@@ -20,7 +20,7 @@ type Query {
 }
 
 type Mutation {
-  newListing(description: String!, cost: Float!, prodid: ID!): Listing!
+  newListing(description: String!, cost: Float!, file:File! prodid: ID!): Listing!
   newProd(name: String!, category: String!, file: File!): Product!
   signup(email: String!, password: String!, name: String!): AuthPayload
   login(email: String!, password: String!): AuthPayload
@@ -37,6 +37,7 @@ type Listing {
   id: ID!
   description: String!
   cost: Float!
+  photo: String!
   postedBy: User!
   product: Product!
 }
@@ -146,18 +147,43 @@ const resolvers = {
     // Creates a new listing
     async newListing(
       parent: unknown,
-      args: { description: string; cost: number; prodid: number },
+      args: { description: string; cost: number; file: File; prodid: number },
       context: GraphQLContext
     ) {
-      const newListing = await context.prisma.listing.create({
-        data: {
-          description: args.description,
-          cost: args.cost,
-          product: { connect: { id: Number(args.prodid) } },
-          postedBy: { connect: { id: context.currentUser.id } },
-        },
+       const credentials = {
+        accessKeyId: "peU3s3HTRnG3sikb",
+        secretAccessKey: "jvBhdrNxeIRs2QghZzDBVs8RIvxScJwHjgPK7QUB",
+      };
+      const s3Client = new S3Client({
+        endpoint: "https://s3.tebi.io",
+        credentials: credentials,
+        region: "global",
       });
-      return newListing;
+      const _file = await args.file.arrayBuffer();
+      if (_file) {
+        try {
+          const image = await sharp(_file).resize(600, 600).png().toBuffer();
+          await s3Client.send(
+            new PutObjectCommand({
+              Bucket: "hpdb",
+              Key: args.file.name,
+              Body: image,
+            })
+          );
+          const newListing = await context.prisma.listing.create({
+            data: {
+              description: args.description,
+              cost: args.cost,
+              photo: `https://s3.tebi.io/hpdb/${args.file.name}`,
+              product: { connect: { id: Number(args.prodid) } },
+              postedBy: { connect: { id: context.currentUser.id } },
+            },
+          });
+          return newListing;
+        } catch (error) {
+          return error;
+        }
+      }
     },
     // Creates a new product
     async newProd(
