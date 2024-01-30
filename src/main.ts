@@ -11,10 +11,10 @@ const yoga = createYoga({ schema, context: createContext });
 
 app.use(yoga.graphqlEndpoint, yoga);
 app.use(
-  '/graphql',
+  "/graphql",
   graphqlUploadExpress({ maxFileSize: 100000000, maxFiles: 10 })
 );
 dotenv.config();
 app.listen(process.env.port, () => {
-  console.log();
+  console.log(`Running a GraphQL API server at http://localhost:${process.env.port}/graphql`);
 });
