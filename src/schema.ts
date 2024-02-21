@@ -5,6 +5,7 @@ import { hash, compare } from "bcryptjs";
 import { sign } from "jsonwebtoken";
 import { APP_SECRET } from "./auth";
 import { User, Listing, Product } from "@prisma/client";
+import { generate } from "randomstring";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 
@@ -20,7 +21,7 @@ type Query {
 }
 
 type Mutation {
-  newListing(description: String!, cost: Float!, file:File! prodid: ID!): Listing!
+  newListing(title: String!, description: String!, cost: Float!, file:File! prodid: ID!): Listing!
   newProd(name: String!, category: String!, file: File!): Product!
   signup(email: String!, password: String!, name: String!): AuthPayload
   login(email: String!, password: String!): AuthPayload
@@ -35,6 +36,7 @@ type User {
 
 type Listing {
   id: ID!
+  title: String!
   description: String!
   cost: Float!
   photo: String!
@@ -147,10 +149,16 @@ const resolvers = {
     // Creates a new listing
     async newListing(
       parent: unknown,
-      args: { description: string; cost: number; file: File; prodid: number },
+      args: {
+        title: string;
+        description: string;
+        cost: number;
+        file: File;
+        prodid: number;
+      },
       context: GraphQLContext
     ) {
-       const credentials = {
+      const credentials = {
         accessKeyId: "peU3s3HTRnG3sikb",
         secretAccessKey: "jvBhdrNxeIRs2QghZzDBVs8RIvxScJwHjgPK7QUB",
       };
@@ -163,18 +171,23 @@ const resolvers = {
       if (_file) {
         try {
           const image = await sharp(_file).resize(600, 600).png().toBuffer();
+          const filename = generate({
+            length: 12,
+            charset: 'alphabetic'
+          });
           await s3Client.send(
             new PutObjectCommand({
               Bucket: "hpdb",
-              Key: args.file.name,
+              Key: filename,
               Body: image,
             })
           );
           const newListing = await context.prisma.listing.create({
             data: {
+              title: args.title,
               description: args.description,
               cost: args.cost,
-              photo: `https://s3.tebi.io/hpdb/${args.file.name}`,
+              photo: `https://s3.tebi.io/hpdb/${filename}`,
               product: { connect: { id: Number(args.prodid) } },
               postedBy: { connect: { id: context.currentUser.id } },
             },
@@ -191,23 +204,28 @@ const resolvers = {
       args: { name: string; category: string; file: File },
       context: GraphQLContext
     ) {
-      const credentials = {
-        accessKeyId: "peU3s3HTRnG3sikb",
-        secretAccessKey: "jvBhdrNxeIRs2QghZzDBVs8RIvxScJwHjgPK7QUB",
-      };
-      const s3Client = new S3Client({
-        endpoint: "https://s3.tebi.io",
-        credentials: credentials,
-        region: "global",
-      });
       const _file = await args.file.arrayBuffer();
       if (_file) {
+        const credentials = {
+          accessKeyId: "peU3s3HTRnG3sikb",
+          secretAccessKey: "jvBhdrNxeIRs2QghZzDBVs8RIvxScJwHjgPK7QUB",
+        };
+        const s3Client = new S3Client({
+          endpoint: "https://s3.tebi.io",
+          credentials: credentials,
+          region: "global",
+        });
+
         try {
           const image = await sharp(_file).resize(600, 600).png().toBuffer();
+          const filename = generate({
+            length: 12,
+            charset: 'alphabetic'
+          });
           await s3Client.send(
             new PutObjectCommand({
               Bucket: "hpdb",
-              Key: args.file.name,
+              Key: filename,
               Body: image,
             })
           );
@@ -215,13 +233,15 @@ const resolvers = {
             data: {
               name: args.name,
               category: args.category,
-              photo: `https://s3.tebi.io/hpdb/${args.file.name}`,
+              photo: `https://s3.tebi.io/hpdb/${filename}`,
             },
           });
           return newProd;
         } catch (error) {
           return error;
         }
+      } else {
+        throw new Error("No File");
       }
     },
   },

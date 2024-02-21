@@ -21,6 +21,7 @@ model User {
 model Listing {
   id          Int      @id @default(sequence())
   createdAt   DateTime @default(now())
+  title       String
   description String
   cost        Float
   photo       String
