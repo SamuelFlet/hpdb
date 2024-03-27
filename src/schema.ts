@@ -4,7 +4,7 @@ import { GraphQLDateTime } from "graphql-scalars";
 import { hash, compare } from "bcryptjs";
 import { sign } from "jsonwebtoken";
 import { APP_SECRET } from "./auth";
-import { User, Listing, Product } from "@prisma/client";
+import { User, Listing, Product, Prisma } from "@prisma/client";
 import { generate } from "randomstring";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import sharp from "sharp";
@@ -13,11 +13,28 @@ const typeDefs = `
 scalar DateTime
 scalar File
 
+input ListingOrderByInput {
+  cost: Sort
+}
+ 
+enum Sort {
+  asc
+  desc
+}
+
+type Subscription {
+  newListing: Listing!
+}
+
 type Query {
   hello: String!
   feed: [Listing!]!
+  prodlistFeed(orderBy: ListingOrderByInput, id:Int!): [Listing!]
+  getProduct(id:Int!): Product
+  getListing(id:Int!): Listing
   prodfeed: [Product!]!
   me: User!
+  avg(id:Int!): String
 }
 
 type Mutation {
@@ -31,25 +48,38 @@ type User {
   id: ID!
   name: String!
   email: String!
-  listings: [Listing!]!
+  listings: [Listing!]
+  reviews: [Review!]
 } 
 
 type Listing {
   id: ID!
+  condition: String!
   title: String!
   description: String!
   cost: Float!
   photo: String!
-  postedBy: User!
+  postedby: User!
+  product: Product!
+}
+
+type Review {
+  id: ID!
+  title: String!
+  content: String!
+  rating: Int!
+  postedby: User!
   product: Product!
 }
  
 type Product {
   id: ID!
+  rating: Float!
   name: String!
   category: String!
   photo: String!
   listings: [Listing!]
+  reviews: [Review!]
 }
 
 type AuthPayload {
@@ -64,7 +94,7 @@ const resolvers = {
   Listing: {
     id: (parent: Listing) => parent.id,
     product(parent: Listing, args: {}, context: GraphQLContext) {
-      if (!parent.productId) {
+      if (!parent.productid) {
         return null;
       }
       return context.prisma.listing
@@ -73,13 +103,13 @@ const resolvers = {
     },
     description: (parent: Listing) => parent.description,
     cost: (parent: Listing) => parent.cost,
-    postedBy(parent: Listing, args: {}, context: GraphQLContext) {
-      if (!parent.postedById) {
+    postedby(parent: Listing, args: {}, context: GraphQLContext) {
+      if (!parent.postedbyid) {
         return null;
       }
       return context.prisma.listing
         .findUnique({ where: { id: parent.id } })
-        .postedBy();
+        .postedby();
     },
   },
   // User resolver
@@ -87,6 +117,8 @@ const resolvers = {
     // ... other User object type field resolver functions ...
     listings: (parent: User, args: {}, context: GraphQLContext) =>
       context.prisma.user.findUnique({ where: { id: parent.id } }).listings(),
+    reviews: (parent: User, args: {}, context: GraphQLContext) =>
+      context.prisma.user.findUnique({ where: { id: parent.id } }).reviews(),
   },
   // Product resolver
   Product: {
@@ -95,6 +127,14 @@ const resolvers = {
       context.prisma.product
         .findUnique({ where: { id: parent.id } })
         .listings(),
+    reviews: (parent: Product, args: {}, context: GraphQLContext) =>
+      context.prisma.product.findUnique({ where: { id: parent.id } }).reviews(),
+  },
+  Subscription: {
+    newListing: {
+      subscribe: (parent: unknown, args: {}, context: GraphQLContext) =>
+        context.pubSub.subscribe("newListing"),
+    },
   },
   Query: {
     // Test query
@@ -102,7 +142,60 @@ const resolvers = {
     // Gives list of all listings
     feed: (parent: unknown, args: {}, context: GraphQLContext) =>
       context.prisma.listing.findMany(),
+    prodlistFeed(
+      parent: unknown,
+      args: {
+        id: number;
+        orderBy?: {
+          cost?: Prisma.SortOrder;
+        };
+      },
+      context: GraphQLContext
+    ) {
+      return context.prisma.listing.findMany({
+        where: { productid: args.id },
+        orderBy: args.orderBy,
+      });
+    },
+    async getProduct(
+      parent: unknown,
+      args: { id: number },
+      context: GraphQLContext
+    ) {
+      const product = await context.prisma.product.findUnique({
+        where: {
+          id: args.id,
+        },
+      });
+      return product;
+    },
+    async getListing(
+      parent: unknown,
+      args: { id: number },
+      context: GraphQLContext
+    ) {
+      const listing = await context.prisma.listing.findUnique({
+        where: {
+          id: args.id,
+        },
+      });
+      return listing;
+    },
+    async avg(
+      parent: Product,
+      args: { id: number },
+      context: GraphQLContext
+    ) {
+      const aggregations = await context.prisma.review.aggregate({
+        where:{productid:args.id},
+        _avg: {
+          rating: true,
+        },
+      })
+      return aggregations._avg.rating
+    },
     // Gives list of all products
+
     prodfeed: (parent: unknown, args: {}, context: GraphQLContext) =>
       context.prisma.product.findMany(),
     // Gives current user
@@ -153,6 +246,7 @@ const resolvers = {
         title: string;
         description: string;
         cost: number;
+        condition: string;
         file: File;
         prodid: number;
       },
@@ -173,12 +267,12 @@ const resolvers = {
           const image = await sharp(_file).resize(600, 600).png().toBuffer();
           const filename = generate({
             length: 12,
-            charset: 'alphabetic'
+            charset: "alphabetic",
           });
           await s3Client.send(
             new PutObjectCommand({
               Bucket: "hpdb",
-              Key: filename,
+              Key: `Listings/${filename}.png`,
               Body: image,
             })
           );
@@ -187,11 +281,13 @@ const resolvers = {
               title: args.title,
               description: args.description,
               cost: args.cost,
-              photo: `https://s3.tebi.io/hpdb/${filename}`,
+              condition: args.condition,
+              photo: `https://s3.tebi.io/hpdb/Listings/${filename}.png`,
               product: { connect: { id: Number(args.prodid) } },
-              postedBy: { connect: { id: context.currentUser.id } },
+              postedby: { connect: { id: context.currentUser.id } },
             },
           });
+          context.pubSub.publish("newListing", { newListing });
           return newListing;
         } catch (error) {
           return error;
@@ -220,12 +316,12 @@ const resolvers = {
           const image = await sharp(_file).resize(600, 600).png().toBuffer();
           const filename = generate({
             length: 12,
-            charset: 'alphabetic'
+            charset: "alphabetic",
           });
           await s3Client.send(
             new PutObjectCommand({
               Bucket: "hpdb",
-              Key: filename,
+              Key: `Products/${filename}.png`,
               Body: image,
             })
           );
@@ -233,7 +329,7 @@ const resolvers = {
             data: {
               name: args.name,
               category: args.category,
-              photo: `https://s3.tebi.io/hpdb/${filename}`,
+              photo: `https://s3.tebi.io/hpdb/Products/${filename}.png`,
             },
           });
           return newProd;
