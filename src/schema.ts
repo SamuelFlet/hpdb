@@ -1,6 +1,6 @@
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import type { GraphQLContext } from "./context";
-import { GraphQLDateTime } from "graphql-scalars";
+import { GraphQLDateTime, GraphQLJSON } from "graphql-scalars";
 import { hash, compare } from "bcryptjs";
 import { sign } from "jsonwebtoken";
 import { APP_SECRET } from "./auth";
@@ -12,6 +12,7 @@ import sharp from "sharp";
 const typeDefs = `
 scalar DateTime
 scalar File
+scalar JSON
 
 input ListingOrderByInput {
   cost: Sort
@@ -34,7 +35,7 @@ type Query {
   getListing(id:Int!): Listing
   prodfeed: [Product!]!
   me: User!
-  avg(id:Int!): String
+  avg(id:Int!): JSON
 }
 
 type Mutation {
@@ -74,7 +75,7 @@ type Review {
  
 type Product {
   id: ID!
-  rating: Float!
+  rating:[JSON]
   name: String!
   category: String!
   photo: String!
@@ -90,6 +91,7 @@ type AuthPayload {
 
 const resolvers = {
   DateTime: GraphQLDateTime,
+  JSON: GraphQLJSON,
   // Listing resolver
   Listing: {
     id: (parent: Listing) => parent.id,
@@ -129,6 +131,10 @@ const resolvers = {
         .listings(),
     reviews: (parent: Product, args: {}, context: GraphQLContext) =>
       context.prisma.product.findUnique({ where: { id: parent.id } }).reviews(),
+    rating: (parent: Product, args: {}, context: GraphQLContext) =>
+      context.prisma.$queryRaw`SELECT AVG(rating)
+      FROM public."Review"
+      WHERE  productid = ${parent.id};`
   },
   Subscription: {
     newListing: {
@@ -191,8 +197,11 @@ const resolvers = {
         _avg: {
           rating: true,
         },
+        _count: {
+          rating: true,
+        },
       })
-      return aggregations._avg.rating
+      return aggregations
     },
     // Gives list of all products
 

@@ -9,7 +9,8 @@ export async function authenticateUser(
   request: Request
 ): Promise<User | null> {
   const header = request.headers.get("authorization");
-  if (header !== null) {
+  if (header != null) {
+    console.log(header)
     const token = header.split(" ")[1];
     const tokenPayload = verify(token, APP_SECRET) as JwtPayload;
     const userId = tokenPayload.userId;

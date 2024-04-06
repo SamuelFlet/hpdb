@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 
 const app = express();
 
-const yoga = createYoga({ schema, context: createContext });
+const yoga = createYoga({ schema, context: createContext, batching: true });
 
 app.use(yoga.graphqlEndpoint, yoga);
 app.use(
@@ -16,5 +16,7 @@ app.use(
 );
 dotenv.config();
 app.listen(process.env.port, () => {
-  console.log(`Running a GraphQL API server at http://localhost:${process.env.port}/graphql`);
+  console.log(
+    `Running a GraphQL API server at http://localhost:${process.env.port}/graphql`
+  );
 });
